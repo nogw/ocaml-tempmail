@@ -1,0 +1,10 @@
+(executables
+ (names cli tempmail)
+ (libraries 
+  lwt 
+  cmdliner 
+  cohttp-lwt-unix 
+  cohttp
+  lwt.unix
+  yojson
+ ))
