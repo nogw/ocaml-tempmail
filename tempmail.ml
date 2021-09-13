@@ -32,12 +32,18 @@ let refresh value =
     body |> Cohttp_lwt.Body.to_string >|= fun body -> body
   in
 
+  let show j =
+    j |> Yojson.Basic.Util.member "id" |> Yojson.Basic.Util.to_int |> string_of_int |> Printf.printf "id - %s   ";
+    j |> Yojson.Basic.Util.member "from" |> Yojson.Basic.Util.to_string |> Printf.printf "from - %s   ";
+    j |> Yojson.Basic.Util.member "subject" |> Yojson.Basic.Util.to_string |> Printf.printf "subject - %s\n";
+  in
+
   match value with
   | Some value -> print_endline value
   | None -> 
     let body = Lwt_main.run fetch in
-    let json = Yojson.Safe.from_string body in
-    Format.printf "Parsed to %a" Yojson.Safe.pp json
+    let json = Yojson.Basic.from_string body in
+    json |> Yojson.Basic.Util.to_list |> List.iter show
 
 let access value = 
   let user = "1olnfk0d" 
