@@ -25,13 +25,12 @@ let generate value =
       Printf.printf "your email is => %s\n" email
 
 let refresh value =
-  let user = "z76qbbnnxj" 
-  and domain = "yoggm" in 
+  let user = "1olnfk0d" 
+  and domain = "wwjmp" in 
   let uri = "https://www.1secmail.com/api/v1/?action=getMessages&login=" ^ user ^ "&domain=" ^ domain ^ ".com" in
   let fetch = Client.get(Uri.of_string uri) >>= fun (_, body) -> 
     body |> Cohttp_lwt.Body.to_string >|= fun body -> body
   in
-
 
   match value with
   | Some value -> print_endline value
@@ -39,3 +38,20 @@ let refresh value =
     let body = Lwt_main.run fetch in
     let json = Yojson.Safe.from_string body in
     Format.printf "Parsed to %a" Yojson.Safe.pp json
+
+let access value = 
+  let user = "1olnfk0d" 
+  and domain = "wwjmp" in 
+
+  match value with
+  | Some value -> 
+    let uri = "https://www.1secmail.com/api/v1/?action=readMessage&login=" ^ user ^ "&domain=" ^ domain ^ ".com&id=" ^ value in
+    let fetch = Client.get(Uri.of_string uri) >>= fun (_, body) ->
+      body |> Cohttp_lwt.Body.to_string >|= fun body -> body
+    in
+    
+    let body = Lwt_main.run fetch in
+    let json = Yojson.Safe.from_string body in
+    Format.printf "Parsed to %a" Yojson.Safe.pp json
+  | None ->
+    print_endline "id?"

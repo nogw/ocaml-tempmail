@@ -15,7 +15,7 @@ let access_term =
   let access_cmd =
     Arg.(value & pos 0 (some string) None & info []) in
   let doc = "access email inbox using ID." in
-  Term.(const print_t $ access_cmd),
+  Term.(const access $ access_cmd),
   Term.info "a" ~doc
 
 let refresh_term =
@@ -33,7 +33,7 @@ let default_cmd =
 let cmds = [
   generate_term;
   refresh_term;
-  (* access_term; *)
+  access_term;
 ]
 
 let () = Term.(exit @@ eval_choice default_cmd cmds)
