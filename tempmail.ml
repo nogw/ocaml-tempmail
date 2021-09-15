@@ -7,8 +7,21 @@ let () =
 
 let red = Fmt.(styled `Red (styled `Bold string))
 let green = Fmt.(styled `Green (styled `Bold string))
-let print_green x y =
-  Fmt.pr "%a %s\t\t" green x y
+
+let tmp_dir = "/tmp/ocaml-tempmail"
+let tmpmail_address= tmp_dir ^ "/email_adress.txt"
+
+let save_email email =
+  match () with
+  | _ when Sys.file_exists tmp_dir -> 
+    let oc = open_out tmpmail_address in
+    Printf.fprintf oc "%s\n" email;
+    close_out oc
+  | _ -> 
+    Sys.mkdir tmp_dir 0o777;
+    let oc = open_out tmpmail_address in
+    Printf.fprintf oc "%s\n" email;
+    close_out oc
 
 let generate value =
   let fetch = Client.get(Uri.of_string "https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1") >>= fun (_, body) ->
@@ -25,7 +38,8 @@ let generate value =
       |> Yojson.Basic.Util.index 0
       |> Yojson.Basic.Util.to_string
     in
-      Printf.printf "your email is => %s\n" email
+      save_email email;
+      Fmt.pr "%a %s\n" green "[EMAIL]:" email
 
 let refresh value =
   let user = "1olnfk0d" 
@@ -35,11 +49,15 @@ let refresh value =
     body |> Cohttp_lwt.Body.to_string >|= fun body -> body
   in
 
+  let print x y =
+    Fmt.pr "%a %s\t\t" green x y
+  in
+
   let show j =
-    j |> Yojson.Basic.Util.member "id" |> Yojson.Basic.Util.to_int |> string_of_int |> print_green "[ID]:"; 
-    j |> Yojson.Basic.Util.member "from" |> Yojson.Basic.Util.to_string |> print_green "[FROM]:";
-    j |> Yojson.Basic.Util.member "subject" |> Yojson.Basic.Util.to_string |> print_green "[SUBJECT]:";
-    print_endline "\n"
+    j |> Yojson.Basic.Util.member "id" |> Yojson.Basic.Util.to_int |> string_of_int |> print "[ID]:"; 
+    j |> Yojson.Basic.Util.member "from" |> Yojson.Basic.Util.to_string |> print "[FROM]:";
+    j |> Yojson.Basic.Util.member "subject" |> Yojson.Basic.Util.to_string |> print "[SUBJECT]:";
+    print_endline ""
   in
 
   match value with
@@ -72,9 +90,9 @@ let access value =
 
     let body = Lwt_main.run fetch in
     let json = Yojson.Basic.from_string body in 
-    print_email "[DATE]: " (json_pos json "date"); 
-    print_email "[FROM]: " (json_pos json "from"); 
-    print_email "[SUBJECT]: " (json_pos json "subject"); 
-    print_email "\n" (json_pos json "textBody");
+      print_email "[DATE]: " (json_pos json "date"); 
+      print_email "[FROM]: " (json_pos json "from"); 
+      print_email "[SUBJECT]: " (json_pos json "subject"); 
+      print_email "\n" (json_pos json "textBody");
   | None ->
     Fmt.pr "%a%s\n" red "[Error]: " "enter the ID to access the email"

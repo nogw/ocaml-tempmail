@@ -1,9 +1,9 @@
 {
-  "name": "cli",
+  "name": "ocaml-tempmail",
   "esy": { "buildsInSource": "_build", "build": "dune build" },
   "scripts": {
-    "watch": "esy b dune build ./cli.exe -w",
-    "start": "esy b dune exec ./cli.exe"
+    "watch": "esy b dune build ./main.exe -w",
+    "start": "esy b dune exec ./main.exe"
   },
   "dependencies": {
     "@opam/cmdliner": "1.0.4",
