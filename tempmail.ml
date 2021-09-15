@@ -1,11 +1,14 @@
 open Lwt
-(* open Cohttp *)
 open Cohttp_lwt_unix
 
-let print_t v = 
-  match v with
-  | Some v -> print_endline v
-  | None -> print_endline "none"
+let () = 
+  Fmt.set_utf_8 Fmt.stdout true;
+  Fmt.set_style_renderer Fmt.stdout `Ansi_tty
+
+let red = Fmt.(styled `Red (styled `Bold string))
+let green = Fmt.(styled `Green (styled `Bold string))
+let print_green x y =
+  Fmt.pr "%a %s\t\t" green x y
 
 let generate value =
   let fetch = Client.get(Uri.of_string "https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1") >>= fun (_, body) ->
@@ -33,9 +36,10 @@ let refresh value =
   in
 
   let show j =
-    j |> Yojson.Basic.Util.member "id" |> Yojson.Basic.Util.to_int |> string_of_int |> Printf.printf "id - %s   ";
-    j |> Yojson.Basic.Util.member "from" |> Yojson.Basic.Util.to_string |> Printf.printf "from - %s   ";
-    j |> Yojson.Basic.Util.member "subject" |> Yojson.Basic.Util.to_string |> Printf.printf "subject - %s\n";
+    j |> Yojson.Basic.Util.member "id" |> Yojson.Basic.Util.to_int |> string_of_int |> print_green "[ID]:"; 
+    j |> Yojson.Basic.Util.member "from" |> Yojson.Basic.Util.to_string |> print_green "[FROM]:";
+    j |> Yojson.Basic.Util.member "subject" |> Yojson.Basic.Util.to_string |> print_green "[SUBJECT]:";
+    print_endline "\n"
   in
 
   match value with
@@ -62,13 +66,15 @@ let access value =
       |> Yojson.Basic.Util.to_string
     in
 
+    let print_email x y =
+      Fmt.pr "%a%s\n" green x y
+    in
+
     let body = Lwt_main.run fetch in
-    let json = Yojson.Basic.from_string body in
-    Format.printf 
-      "date: %s\nfrom: %s\nsubject: %s\n\n%s\n" 
-      (json_pos json "date") 
-      (json_pos json "from") 
-      (json_pos json "subject")
-      (json_pos json "textBody")
+    let json = Yojson.Basic.from_string body in 
+    print_email "[DATE]: " (json_pos json "date"); 
+    print_email "[FROM]: " (json_pos json "from"); 
+    print_email "[SUBJECT]: " (json_pos json "subject"); 
+    print_email "\n" (json_pos json "textBody");
   | None ->
-    print_endline "id?"
+    Fmt.pr "%a%s\n" red "[Error]: " "enter the ID to access the email"
