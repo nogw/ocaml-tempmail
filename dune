@@ -7,4 +7,5 @@
   cohttp
   lwt.unix
   yojson
+  str
  ))

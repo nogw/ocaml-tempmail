@@ -7,9 +7,8 @@ let () =
 
 let red = Fmt.(styled `Red (styled `Bold string))
 let green = Fmt.(styled `Green (styled `Bold string))
-
 let tmp_dir = "/tmp/ocaml-tempmail"
-let tmpmail_address= tmp_dir ^ "/email_adress.txt"
+let tmpmail_address = tmp_dir ^ "/email_adress.txt"
 
 let save_email email =
   match () with
@@ -29,7 +28,7 @@ let generate value =
   in  
 
   match value with
-  | Some value -> print_endline value
+  | Some value -> ignore value
   | None -> 
     let body = Lwt_main.run fetch in 
     let json = Yojson.Basic.from_string body in
@@ -41,39 +40,42 @@ let generate value =
       save_email email;
       Fmt.pr "%a %s\n" green "[EMAIL]:" email
 
-let refresh value =
-  let user = "1olnfk0d" 
-  and domain = "wwjmp" in 
-  let uri = "https://www.1secmail.com/api/v1/?action=getMessages&login=" ^ user ^ "&domain=" ^ domain ^ ".com" in
-  let fetch = Client.get(Uri.of_string uri) >>= fun (_, body) -> 
-    body |> Cohttp_lwt.Body.to_string >|= fun body -> body
-  in
+let read_file channel =
+  let size = in_channel_length channel in
+  let buf = Bytes.create size in
+  really_input channel buf 0 size;
+  Bytes.unsafe_to_string buf
 
-  let print x y =
-    Fmt.pr "%a %s\t\t" green x y
-  in
-
-  let show j =
-    j |> Yojson.Basic.Util.member "id" |> Yojson.Basic.Util.to_int |> string_of_int |> print "[ID]:"; 
-    j |> Yojson.Basic.Util.member "from" |> Yojson.Basic.Util.to_string |> print "[FROM]:";
-    j |> Yojson.Basic.Util.member "subject" |> Yojson.Basic.Util.to_string |> print "[SUBJECT]:";
-    print_endline ""
-  in
-
-  match value with
-  | Some value -> print_endline value
-  | None -> 
-    let body = Lwt_main.run fetch in
-    let json = Yojson.Basic.from_string body in
-    json |> Yojson.Basic.Util.to_list |> List.iter show
+let get_email =
+  match () with
+  | _ when Sys.file_exists tmpmail_address -> 
+        let x = tmpmail_address
+          |> open_in
+          |> read_file
+          |> Str.replace_first (Str.regexp ".com") ""
+          |> Str.split (Str.regexp "@")
+        in
+          let y = match x with
+            | [] -> failwith "too bad"
+            | [x; y] -> (x, y)
+            | _ -> failwith "too bad"
+          in
+          `Tuple y
+  | _ -> `Unit (generate None)
 
 let access value = 
-  let user = "1olnfk0d" 
-  and domain = "wwjmp" in 
+  let tuple = 
+    match get_email with
+    | `Tuple (x, y) -> (x, y)
+    | `Unit _ -> failwith "a"
+  in
 
+  let fst (x, _) = x
+  and scd (_, x) = x in
+  
   match value with
   | Some value -> 
-    let uri = "https://www.1secmail.com/api/v1/?action=readMessage&login=" ^ user ^ "&domain=" ^ domain ^ ".com&id=" ^ value in
+    let uri = "https://www.1secmail.com/api/v1/?action=readMessage&login=" ^ fst tuple ^ "&domain=" ^ scd tuple ^ ".com&id=" ^ value in
     let fetch = Client.get(Uri.of_string uri) >>= fun (_, body) ->
       body |> Cohttp_lwt.Body.to_string >|= fun body -> body
     in
@@ -96,3 +98,29 @@ let access value =
       print_email "\n" (json_pos json "textBody");
   | None ->
     Fmt.pr "%a%s\n" red "[Error]: " "enter the ID to access the email"
+
+let refresh value =
+  let user = "9amampm" 
+  and domain = "esiix" in 
+  let uri = "https://www.1secmail.com/api/v1/?action=getMessages&login=" ^ user ^ "&domain=" ^ domain ^ ".com" in
+  let fetch = Client.get(Uri.of_string uri) >>= fun (_, body) -> 
+    body |> Cohttp_lwt.Body.to_string >|= fun body -> body
+  in
+
+  let print x y =
+    Fmt.pr "%a %s\t\t" green x y
+  in
+
+  let show j =
+    j |> Yojson.Basic.Util.member "id" |> Yojson.Basic.Util.to_int |> string_of_int |> print "[ID]:"; 
+    j |> Yojson.Basic.Util.member "from" |> Yojson.Basic.Util.to_string |> print "[FROM]:";
+    j |> Yojson.Basic.Util.member "subject" |> Yojson.Basic.Util.to_string |> print "[SUBJECT]:";
+    print_endline ""
+  in
+
+  match value with
+  | Some value -> print_endline value
+  | None -> 
+    let body = Lwt_main.run fetch in
+    let json = Yojson.Basic.from_string body in
+    json |> Yojson.Basic.Util.to_list |> List.iter show
