@@ -22,15 +22,17 @@ let save_email email =
     Printf.fprintf oc "%s\n" email;
     close_out oc
 
+let return_body uri =
+  Client.get(Uri.of_string uri) >>= fun (_, body) ->
+  body |> Cohttp_lwt.Body.to_string >|= fun body -> body
+
 let generate value =
-  let fetch = Client.get(Uri.of_string "https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1") >>= fun (_, body) ->
-    body |> Cohttp_lwt.Body.to_string >|= fun body -> body
-  in  
+  let uri = "https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1" in
 
   match value with
   | Some value -> ignore value
   | None -> 
-    let body = Lwt_main.run fetch in 
+    let body = Lwt_main.run (return_body uri) in 
     let json = Yojson.Basic.from_string body in
     let email = 
       json
@@ -46,40 +48,37 @@ let read_file channel =
   really_input channel buf 0 size;
   Bytes.unsafe_to_string buf
 
-let get_email =
-  match () with
-  | _ when Sys.file_exists tmpmail_address -> 
-        let x = tmpmail_address
+let get_email () =
+  print_endline "sex";
+  if Sys.file_exists tmpmail_address then
+    let x = tmpmail_address
           |> open_in
           |> read_file
-          |> Str.replace_first (Str.regexp ".com") ""
           |> Str.split (Str.regexp "@")
         in
           let y = match x with
-            | [] -> failwith "too bad"
             | [x; y] -> (x, y)
             | _ -> failwith "too bad"
           in
           `Tuple y
-  | _ -> `Unit (generate None)
+  else `Unit (generate None)
 
-let access value = 
+let access value =   
   let tuple = 
-    match get_email with
+    match get_email () with
     | `Tuple (x, y) -> (x, y)
-    | `Unit _ -> failwith "a"
+    | `Unit _ -> failwith "too bad"
   in
 
   let fst (x, _) = x
-  and scd (_, x) = x in
-  
+  and scd (_, x) = x
+  in
   match value with
   | Some value -> 
-    let uri = "https://www.1secmail.com/api/v1/?action=readMessage&login=" ^ fst tuple ^ "&domain=" ^ scd tuple ^ ".com&id=" ^ value in
-    let fetch = Client.get(Uri.of_string uri) >>= fun (_, body) ->
-      body |> Cohttp_lwt.Body.to_string >|= fun body -> body
+    let uri = 
+      "https://www.1secmail.com/api/v1/?action=readMessage&login=" ^ fst tuple ^ "&domain=" ^ scd tuple ^ "&id=" ^ value 
+      |> Str.replace_first (Str.regexp "\n") ""
     in
-
     let json_pos json p =
       json
       |> Yojson.Basic.Util.member p
@@ -90,22 +89,26 @@ let access value =
       Fmt.pr "%a%s\n" green x y
     in
 
-    let body = Lwt_main.run fetch in
+    let body = Lwt_main.run (return_body uri) in
     let json = Yojson.Basic.from_string body in 
       print_email "[DATE]: " (json_pos json "date"); 
       print_email "[FROM]: " (json_pos json "from"); 
       print_email "[SUBJECT]: " (json_pos json "subject"); 
       print_email "\n" (json_pos json "textBody");
   | None ->
-    Fmt.pr "%a%s\n" red "[Error]: " "enter the ID to access the email"
+    Fmt.pr "%a%s\n" red "[ERROR]: " "enter the ID to access the email"
 
 let refresh value =
-  let user = "9amampm" 
-  and domain = "esiix" in 
-  let uri = "https://www.1secmail.com/api/v1/?action=getMessages&login=" ^ user ^ "&domain=" ^ domain ^ ".com" in
-  let fetch = Client.get(Uri.of_string uri) >>= fun (_, body) -> 
-    body |> Cohttp_lwt.Body.to_string >|= fun body -> body
+  let tuple = 
+    match get_email () with
+    | `Tuple (x, y) -> (x, y)
+    | `Unit _ -> failwith "too bad"
   in
+
+  let fst (x, _) = x
+  and scd (_, x) = x
+  in
+  let uri = "https://www.1secmail.com/api/v1/?action=getMessages&login=" ^ fst tuple ^ "&domain=" ^ scd tuple in
 
   let print x y =
     Fmt.pr "%a %s\t\t" green x y
@@ -121,6 +124,6 @@ let refresh value =
   match value with
   | Some value -> print_endline value
   | None -> 
-    let body = Lwt_main.run fetch in
+    let body = Lwt_main.run (return_body uri) in
     let json = Yojson.Basic.from_string body in
     json |> Yojson.Basic.Util.to_list |> List.iter show
