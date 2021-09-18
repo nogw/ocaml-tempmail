@@ -7,6 +7,7 @@ let () =
 
 let red = Fmt.(styled `Red (styled `Bold string))
 let green = Fmt.(styled `Green (styled `Bold string))
+let yellow = Fmt.(styled `Yellow (styled `Bold string))
 let tmp_dir = "/tmp/ocaml-tempmail"
 let tmpmail_address = tmp_dir ^ "/email_adress.txt"
 
@@ -49,34 +50,33 @@ let read_file channel =
   Bytes.unsafe_to_string buf
 
 let get_email () =
-  print_endline "sex";
   if Sys.file_exists tmpmail_address then
-    let x = tmpmail_address
-          |> open_in
-          |> read_file
-          |> Str.split (Str.regexp "@")
-        in
-          let y = match x with
-            | [x; y] -> (x, y)
-            | _ -> failwith "too bad"
-          in
-          `Tuple y
-  else `Unit (generate None)
+    let x = 
+      tmpmail_address
+      |> open_in
+      |> read_file
+      |> Str.split (Str.regexp "@")
+    in
+      let y = match x with
+        | [x; y] -> (x, y)
+        | _ -> failwith "too bad"
+      in
+      `Tuple y
+  else 
+    (Fmt.pr "%a%s\n" red "[ERROR]: " "An email is required to access this function.";
+    `Unit (generate None))
 
 let access value =   
   let tuple = 
     match get_email () with
     | `Tuple (x, y) -> (x, y)
-    | `Unit _ -> failwith "too bad"
+    | `Unit _ -> exit 0
   in
-
-  let fst (x, _) = x
-  and scd (_, x) = x
-  in
+    
   match value with
   | Some value -> 
     let uri = 
-      "https://www.1secmail.com/api/v1/?action=readMessage&login=" ^ fst tuple ^ "&domain=" ^ scd tuple ^ "&id=" ^ value 
+      "https://www.1secmail.com/api/v1/?action=readMessage&login=" ^ fst tuple ^ "&domain=" ^ snd tuple ^ "&id=" ^ value 
       |> Str.replace_first (Str.regexp "\n") ""
     in
     let json_pos json p =
@@ -90,11 +90,14 @@ let access value =
     in
 
     let body = Lwt_main.run (return_body uri) in
-    let json = Yojson.Basic.from_string body in 
-      print_email "[DATE]: " (json_pos json "date"); 
-      print_email "[FROM]: " (json_pos json "from"); 
-      print_email "[SUBJECT]: " (json_pos json "subject"); 
-      print_email "\n" (json_pos json "textBody");
+    if (body <> "Message not found") then
+      let json = Yojson.Basic.from_string body in 
+        print_email "[DATE]: " (json_pos json "date"); 
+        print_email "[FROM]: " (json_pos json "from"); 
+        print_email "[SUBJECT]: " (json_pos json "subject"); 
+        print_email "\n" (json_pos json "textBody");
+    else 
+      Fmt.pr "%a%s\n" red "[ERROR]: " "Email not found"
   | None ->
     Fmt.pr "%a%s\n" red "[ERROR]: " "enter the ID to access the email"
 
@@ -102,13 +105,11 @@ let refresh value =
   let tuple = 
     match get_email () with
     | `Tuple (x, y) -> (x, y)
-    | `Unit _ -> failwith "too bad"
+    | `Unit _ -> 
+      exit 0 ; 
   in
 
-  let fst (x, _) = x
-  and scd (_, x) = x
-  in
-  let uri = "https://www.1secmail.com/api/v1/?action=getMessages&login=" ^ fst tuple ^ "&domain=" ^ scd tuple in
+  let uri = "https://www.1secmail.com/api/v1/?action=getMessages&login=" ^ fst tuple ^ "&domain=" ^ snd tuple in
 
   let print x y =
     Fmt.pr "%a %s\t\t" green x y
@@ -122,8 +123,24 @@ let refresh value =
   in
 
   match value with
-  | Some value -> print_endline value
+  | Some value -> ignore value
   | None -> 
     let body = Lwt_main.run (return_body uri) in
-    let json = Yojson.Basic.from_string body in
-    json |> Yojson.Basic.Util.to_list |> List.iter show
+
+    if (String.length body > 2) then
+      let json = Yojson.Basic.from_string body in
+      json |> Yojson.Basic.Util.to_list |> List.iter show
+    else
+      Fmt.pr "%a%s\n" yellow "[AWAIT]: " "If the email has already been sent, please wait"
+      
+let get_current value = 
+  ignore value;
+  let tuple = 
+    match get_email () with
+    | `Tuple (x, y) -> (x, y)
+    | `Unit _ -> 
+      exit 0 ; 
+  in
+
+  let email = fst tuple ^ "@" ^ snd tuple in
+  Fmt.pr "%a %s" green "[EMAIL:] " email

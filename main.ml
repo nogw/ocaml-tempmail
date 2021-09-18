@@ -2,6 +2,7 @@ let cmds = [
   Cli.generate_term;
   Cli.refresh_term;
   Cli.access_term;
+  Cli.get_current_email;
 ]
 
 let () = 

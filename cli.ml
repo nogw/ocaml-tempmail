@@ -22,6 +22,13 @@ let refresh_term =
   Term.(const refresh $ refresh_cmd),
   Term.info "r" ~doc
 
+let get_current_email =
+  let doc = "show the current email address I'm logged in" in
+  let get_current_cmd =
+    Arg.(value & pos 0 (some string) None & info []) in
+  Term.(const get_current $ get_current_cmd),
+  Term.info "c" ~doc
+
 let default_cmd =
   let doc = "tempmail" in
   Term.(ret (const (`Help (`Pager, None)))),
