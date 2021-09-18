@@ -12,12 +12,11 @@ let tmp_dir = "/tmp/ocaml-tempmail"
 let tmpmail_address = tmp_dir ^ "/email_adress.txt"
 
 let save_email email =
-  match () with
-  | _ when Sys.file_exists tmp_dir -> 
+  if Sys.file_exists tmp_dir then
     let oc = open_out tmpmail_address in
     Printf.fprintf oc "%s\n" email;
     close_out oc
-  | _ -> 
+  else 
     Sys.mkdir tmp_dir 0o777;
     let oc = open_out tmpmail_address in
     Printf.fprintf oc "%s\n" email;
